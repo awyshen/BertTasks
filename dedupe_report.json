@@ -1,0 +1,34 @@
+{
+  "llm_generation_stats": {
+    "raw": 240,
+    "accepted": 240
+  },
+  "duplicates_by_label": {},
+  "accepted_by_label": {
+    "volume_control:down": 10,
+    "volume_control:up": 10,
+    "volume_control:mute": 10,
+    "music_control:previous": 10,
+    "music_control:next": 10,
+    "music_control:pause": 10,
+    "music_control:stop": 10,
+    "music_control:play": 10,
+    "projector_control:open": 10,
+    "projector_control:close": 10,
+    "robot_control:cancel_nav": 10,
+    "robot_control:start_charge": 10,
+    "robot_control:stop_charge": 10,
+    "assistant_control:sleep": 10,
+    "assistant_control:chat": 10,
+    "volume_control:set_volume": 10,
+    "music_control:play_specific_music": 10,
+    "music_control:open_app": 10,
+    "music_control:close_app": 10,
+    "app_control:open_video_app": 10,
+    "app_control:close_video_app": 10,
+    "app_control:play_video_content": 10,
+    "robot_control:navigate_to_place": 10,
+    "unknown": 10
+  },
+  "existing_rows": 0
+}

@@ -1,0 +1,77 @@
+{
+  "mode": "llm",
+  "provider": "openai_compatible",
+  "model": "deepseek-v4-pro",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "temperature": 0.7,
+  "batch_size": 50,
+  "sleep_seconds": 2.0,
+  "minimums": {
+    "default_per_intent": 3000,
+    "default_per_slot_filling": 4000,
+    "volume_set": 5000,
+    "music_play_specific": 6000,
+    "video_play_content": 6000,
+    "robot_nav": 5000
+  },
+  "quality_control": {
+    "enable_validation": true,
+    "min_text_length": 3,
+    "max_text_length": 100,
+    "enable_deduplication": true,
+    "dedupe_threshold": 0.95,
+    "enable_diversity_check": true,
+    "min_diversity_score": 0.7
+  },
+  "data_augmentation": {
+    "enable": true,
+    "back_translation_prob": 0.2,
+    "synonym_replacement_prob": 0.15,
+    "random_insertion_prob": 0.1,
+    "random_swap_prob": 0.1
+  },
+  "task_types": {
+    "multi_intent_classification": [
+      "volume_down",
+      "volume_up",
+      "volume_mute",
+      "music_previous",
+      "music_next",
+      "music_pause",
+      "music_stop",
+      "music_resume",
+      "projector_open",
+      "projector_close",
+      "robot_cancel_nav",
+      "robot_start_charge",
+      "robot_stop_charge",
+      "assistant_sleep",
+      "assistant_chat",
+      "unknown"
+    ],
+    "slot_filling": [
+      "volume_set",
+      "music_play_specific",
+      "music_open_app",
+      "music_close_app",
+      "video_open_app",
+      "video_close_app",
+      "video_play_content",
+      "robot_nav"
+    ]
+  },
+  "negative_samples": {
+    "unknown_intent": 3000,
+    "out_of_domain": 2000
+  },
+  "split": {
+    "train": 0.75,
+    "validation": 0.15,
+    "test": 0.1
+  },
+  "class_balancing": {
+    "enable": true,
+    "min_samples_per_class": 1000,
+    "max_samples_per_class": 10000
+  }
+}

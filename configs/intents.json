@@ -1,0 +1,108 @@
+{
+  "intents": {
+    "volume_control": {
+      "value": "speaker",
+      "slots": ["volume"]
+    },
+    "music_control": {
+      "value": "music_player",
+      "slots": ["control", "singer", "song", "app"]
+    },
+    "app_control": {
+      "value": "video_player",
+      "slots": ["control", "app", "content", "content_type"]
+    },
+    "projector_control": {
+      "value": "projector",
+      "slots": ["control"]
+    },
+    "robot_control": {
+      "values": ["nav", "charge"],
+      "slots": ["control", "place"]
+    },
+    "assistant_control": {
+      "value": "assistant",
+      "slots": ["control"]
+    }
+  },
+  "training_tasks": {
+    "intent_classification": [
+      "volume_control:down",
+      "volume_control:up",
+      "volume_control:mute",
+      "volume_control:set_volume",
+      "music_control:previous",
+      "music_control:next",
+      "music_control:pause",
+      "music_control:stop",
+      "music_control:play",
+      "music_control:open_app",
+      "music_control:close_app",
+      "music_control:play_specific_music",
+      "app_control:open_video_app",
+      "app_control:close_video_app",
+      "app_control:play_video_content",
+      "projector_control:open",
+      "projector_control:close",
+      "robot_control:navigate_to_place",
+      "robot_control:cancel_nav",
+      "robot_control:start_charge",
+      "robot_control:stop_charge",
+      "assistant_control:sleep",
+      "assistant_control:chat",
+      "unknown"
+    ],
+    "slot_filling": [
+      "volume_control:set_volume",
+      "music_control:play_specific_music",
+      "music_control:open_app",
+      "music_control:close_app",
+      "app_control:open_video_app",
+      "app_control:close_video_app",
+      "app_control:play_video_content",
+      "robot_control:navigate_to_place"
+    ]
+  },
+  "slot_task_policy": {
+    "volume_control:set_volume": ["volume"],
+    "music_control:play_specific_music": ["singer", "song"],
+    "music_control:open_app": ["app"],
+    "music_control:close_app": ["app"],
+    "app_control:open_video_app": ["app"],
+    "app_control:close_video_app": ["app"],
+    "app_control:play_video_content": ["content", "content_type"],
+    "robot_control:navigate_to_place": ["place"]
+  },
+  "apps": {
+    "music": {
+      "音乐播放器": "default_music_app",
+      "默认音乐": "default_music_app",
+      "QQ音乐": "qq_music_app",
+      "qq音乐": "qq_music_app",
+      "网易云音乐": "netease_music_app",
+      "酷狗音乐": "kugou_music_app"
+    },
+    "video": {
+      "本地视频": "default_video_app",
+      "视频": "default_video_app",
+      "爱奇艺": "iqiyi_video_app",
+      "爱艺奇": "iqiyi_video_app",
+      "腾讯视频": "tencent_video_app",
+      "优酷": "youku_video_app"
+    }
+  },
+  "content_types": {
+    "电影": "movie",
+    "影片": "movie",
+    "综艺": "program",
+    "节目": "program",
+    "电视剧": "drama",
+    "剧集": "drama",
+    "短视频": "short_video",
+    "直播": "live"
+  },
+  "thresholds": {
+    "intent_confidence": 0.9,
+    "slot_confidence": 0.9
+  }
+}

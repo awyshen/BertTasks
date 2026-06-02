@@ -1,0 +1,349 @@
+一、意图和指令说明
+1. 指令类型：音量控制
+意图: volume_control
+1.1 降低音量
+指令名称：降低音量
+指令结构化:
+{
+	"intent": "volume_control",
+	"value": "speaker",
+	"params": {
+		"volume": "down"
+	}
+}
+prompt 语料示例: 音量调低一些，声音小一点，声音太大了，小声点，说话轻一点，声音收一收，太吵了，声音压低一点，降低点分贝
+
+1.2 提高音量
+指令名称：提高音量
+指令结构化:
+{
+	"intent": "volume_control",
+	"value": "speaker",
+	"params": {
+		"volume": "up"
+	}
+}
+prompt 语料示例: 音量调高一些，声音大点，声音有点小，大点声，声音响一点，提高点分贝
+
+1.3 静音
+指令名称：静音
+指令结构化:
+{
+	"intent": "volume_control",
+	"value": "speaker",
+	"params": {
+		"volume": "mute"
+	}
+}
+prompt 语料示例: 静音，音量调到最低，音量关掉，声音关掉，安静
+
+1.4 音量调节至xx%
+指令名称：音量调节至xx%
+指令结构化:
+{
+	"intent": "volume_control",
+	"value": "speaker",
+	"params": {
+		"volume": "xx"
+	}
+}
+prompt 语料示例: 音量调到70%，声音调到70
+
+2. 音乐控制
+意图：music_control
+2.1 播放上一首音乐
+指令名称: 播放上一首音乐
+指令结构化:
+{
+	"intent": "music_control",
+	"value": "music_player",
+	"params": {
+		"control": "previous"
+	}
+}
+prompt 语料示例: 播放上一首音乐，上一首歌，上一曲，返回前一首，切回前一首，再来一遍刚才那歌
+
+2.2 播放下一首音乐
+指令名称: 播放上一首音乐
+指令结构化:
+{
+	"intent": "music_control",
+	"value": "music_player",
+	"params": {
+		"control": "next"
+	}
+}
+prompt 语料示例: 播放下一首音乐，下一首歌，换下首歌，切歌，跳过，换一首
+
+2.3 暂停播放音乐
+指令名称: 暂停播放音乐
+指令结构化:
+{
+	"intent": "music_control",
+	"value": "music_player",
+	"params": {
+		"control": "pause"
+	}
+}
+prompt 语料示例: 暂停播放歌曲，暂停歌曲，暂停音乐，暂停放歌，暂时先不听了，先停下
+
+2.4 停止播放音乐
+指令名称: 停止播放音乐
+指令结构化:
+{
+	"intent": "music_control",
+	"value": "music_player",
+	"params": {
+		"control": "stop"
+	}
+}
+prompt 语料示例: 停止播放歌曲，不要播放歌曲了，不要播放音乐了，不要放歌了，停止放歌，别放歌了，把音乐关了，不想听歌，结束播放歌曲，让音乐停下来
+
+2.5 继续播放音乐
+指令名称: 继续播放音乐
+指令结构化:
+{
+	"intent": "music_control",
+	"value": "music_player",
+	"params": {
+		"control": "play"
+	}
+}
+prompt 语料示例: 继续播放音乐，继续播放歌曲，继续放歌，接着放歌，恢复播放，我想接着听音乐
+
+2.6 播放xxx的yyy歌曲
+指令名称: 播放xxx的yyy歌曲
+指令结构化:
+{
+	"intent": "music_control",
+	"value": "music_player",
+	"params": {
+		"control": "play",
+		"singer": "xxx",
+		"song": "xxxx"
+	}
+}
+prompt 语料示例: 播放蔡琴的渡口，播放蔡琴的歌，播放歌曲渡口
+
+2.7 打开音乐播放器
+指令名称: 打开音乐播放器
+指令结构化:
+{
+	"intent": "music_control",
+	"value": "music_player",
+	"params": {
+		"control": "open",
+		"app": "default_music_app"
+	}
+}
+app: 默认是default_music_app, QQ 音乐: qq_music_app, 网易云音乐: netease_music_app， 酷狗音乐: kugou_music_app
+prompt 语料示例: 打开音乐播放器，打开QQ音乐，打开网易云音乐，打开酷狗音乐
+
+2.7 关闭音乐播放器
+指令名称: 关闭音乐播放器
+指令结构化:
+{
+	"intent": "music_control",
+	"value": "music_player",
+	"params": {
+		"control": "close",
+		"app": "default_music_app"
+	}
+}
+app: 默认是default_music_app, QQ 音乐: qq_music_app, 网易云音乐: netease_music_app， 酷狗音乐: kugou_music_app
+prompt 语料示例: 关闭音乐播放器，关闭QQ音乐，关闭网易云音乐，关闭酷狗音乐
+
+
+3. 视频控制
+意图: app_control
+3.1 播放视频
+指令名称: 播放视频
+指令结构化:
+{
+	"intent": "app_control",
+	"value": "video_player",
+	"params": {
+		"control": "open",
+		"app": "default_video_app"
+	}
+}
+app: 默认(本地视频)-default_video_app, 爱艺奇-iqiyi_video_app, 腾讯视频-tencent_video_app, 优酷-youku_video_app
+
+prompt 语料示例: 播放本地视频，放本地视频，播本地视频，打开本地视频，打开爱奇艺，打开腾讯视频，打开优酷
+
+3.2 停止播放视频
+指令名称: 停止播放视频
+指令结构化:
+{
+	"intent": "app_control",
+	"value": "video_player",
+	"params": {
+		"control": "close",
+		"app": "default_video_app"
+	}
+}
+app: 默认(本地视频)-default_video_app, 爱艺奇-iqiyi_video_app, 腾讯视频-tencent_video_app, 优酷-youku_video_app
+
+prompt 语料示例: 停止播放视频，停止播放本地视频，关闭视频，关闭爱奇艺，关闭腾讯视频，关闭优酷
+
+3.3 播放xxx视频
+指令名称: 播放xxx视频
+指令结构化:
+{
+	"intent": "app_control",
+	"value": "video_player",
+	"params": {
+		"control": "play",
+		"content": "xxx",
+		"content_type": ""
+	}
+}
+预设 content_type 枚举类型：movie-电影, program-综艺/节目, drama-剧集/电视剧, short_video-短视频, live-直播, unknown-未知类型(默认值)
+prompt 语料示例: 播放电影变形金刚，播放喜剧人单口季节目
+
+4. 投影仪控制
+意图: projector_control
+4.1 打开投影仪
+指令名称: 打开投影仪
+指令结构化:
+{
+	"intent": "projector_control",
+	"value": "projector",
+	"params": {
+		"control": "open"
+	}
+}
+prompt 语料示例: 打开投影仪，把投影打开
+
+4.2 关闭投影仪
+指令名称: 关闭投影仪
+指令结构化:
+{
+	"intent": "projector_control",
+	"value": "projector",
+	"params": {
+		"control": "close"
+	}
+}
+prompt 语料示例: 关闭投影仪，投影仪关了
+
+5. 机器人控制
+意图: roblot_control
+5.1 导航
+指令名称: 导航到 xxx
+指令结构化:
+{
+	"intent": "robot_control",
+	"value": "nav",
+	params: {
+		"place": "xxx"
+	}
+}
+
+prompt 语料示例: 导航到客厅，去客厅吧，来客厅，到客厅去
+注意：导航的位置信息，可以多随机一些，例如卧室、书房、儿童房、老人房、厨房等等，以及预设的空间位置信息。
+
+5.2 取消导航
+指令名称: 取消导航
+指令结构化:
+{
+	"intent": "robot_control",
+	"value": "nav",
+	params: {
+		"control": "cancel"
+	}
+}
+
+prompt 语料示例: 取消导航，不要去客厅了，不要去充电了
+
+5.3 回充
+指令名称：回充
+指令结构化:
+{
+	"intent": "robot_control",
+	"value": "charge",
+	params: {
+		"control": "start"
+	}
+}
+prompt 语料示例: 回去充电，去充电桩，去充电
+
+5.4 停止充电
+指令名称：停止充电
+指令结构化:
+{
+	"intent": "robot_control",
+	"value": "charge",
+	params: {
+		"control": "stop"
+	}
+}
+prompt 语料示例: 停止充电、取消充电、不要充电了
+
+6. 助手控制
+意图: assistant_control
+6.1 助手休眠
+指令名称: 助手休眠
+指令结构化:
+{
+	"intent": "assistant_control",
+	"value": "assistant",
+	"params": {
+		"control": "sleep"
+	}
+}
+prompt 语料示例: 休息一下，退下吧，先下去吧
+
+6.2 聊天模式
+指令名称: 聊天模式
+指令结构化:
+{
+	"intent": "assistant_control",
+	"value": "assistant",
+	"params": {
+		"control": "chat"
+	}
+}
+prompt 语料示例: 我们聊一下吧，进入聊天模式，打开闲聊
+
+二、任务说明
+端侧意图识别和指令解析任务，可能会包含两类：单任务和多任务，同时端侧算法针对的是简单以及稍微复杂一些的意图和指令解析任务，要求高准确率，宁可错过也不漏判、错判等等，所以复杂的单任务和多任务可以交给后端大模型来判断，在端侧直接返回"unknow"即可
+下面是返回 json 结构化的数据格式
+1. 单任务
+用户输入“声音调整到 70%”，返回如下:
+{
+	"query_type": "single_task",
+	"tasks": [
+	    "user_input": "声音调整到 70%",
+	    {
+			"intent": "volume_control",
+			"value": "speaker",
+			"params": {
+				"volume": "70"
+			}
+		}
+	]
+}
+2. 多任务
+用户输入"到客厅打开投影仪", 包含导航到客厅和打开投影仪两个任务指令，返回结果如下
+{
+    "query_type"："multi_task",
+    "tasks": [
+        {
+            "user_input":"到客厅",
+            "intent": "robot_control", 
+            "value":"nav",
+            "params":{
+                "place":"客厅"
+            }
+        },
+        {
+            "user_input":"打开投影仪"，
+            "intent": "projector_control", 
+            "value": "projector",
+            "params":{
+                "control": "open"
+            }
+        }
+    ]
+}

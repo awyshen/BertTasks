@@ -1,0 +1,21 @@
+{
+  "minimums": {
+    "default_per_intent": 10,
+    "default_per_slot_filling": 10,
+    "volume_down": 5,
+    "volume_up": 5,
+    "music_play_specific": 5
+  },
+  "split": {
+    "train": 0.8,
+    "validation": 0.1
+  },
+  "data_augmentation": {
+    "enable": false
+  },
+  "model": "deepseek-v4-pro",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "temperature": 0.7,
+  "batch_size": 5,
+  "sleep_seconds": 1.0
+}
