@@ -212,6 +212,7 @@ class IncrementalDataGenerator:
         sleep_seconds: float,
         batch_size: int,
         config: Optional[dict] = None,
+        timeout: int = 0,
     ):
         self.output_dir = output_dir
         self.model = model
@@ -221,6 +222,7 @@ class IncrementalDataGenerator:
         self.sleep_seconds = sleep_seconds
         self.batch_size = batch_size
         self.config = config or {}
+        self.timeout = timeout
         
         self.all_rows: list[dict[str, Any]] = []
         self.seen_keys: set[str] = set()
@@ -370,13 +372,20 @@ class IncrementalDataGenerator:
             {"role": "user", "content": prompt},
         ]
         
+        if self.timeout > 0:
+            timeout = self.timeout
+        else:
+            timeout = min(300, 60 + self.batch_size * 4)
+        print(f"  Sending request (timeout={timeout}s, batch_size={self.batch_size})")
+        
         for attempt in range(self.MAX_RETRIES):
             try:
                 completion = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
                     temperature=self.temperature,
-                    timeout=120,
+                    timeout=timeout,
+                    max_tokens=8192,
                 )
                 
                 if not completion.choices:
@@ -400,11 +409,13 @@ class IncrementalDataGenerator:
                 print(f"  Request timeout (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 if attempt < self.MAX_RETRIES - 1:
                     time.sleep(3.0 * (attempt + 1))
+                    continue
         
             except APIConnectionError as e:
                 print(f"  Connection error: {e} (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 if attempt < self.MAX_RETRIES - 1:
                     time.sleep(3.0 * (attempt + 1))
+                    continue
         
             except APIStatusError as e:
                 print(f"  API Error {e.status_code}: {e.response.json() if e.response else e} (attempt {attempt + 1}/{self.MAX_RETRIES})")
@@ -413,10 +424,12 @@ class IncrementalDataGenerator:
                     delay = 3.0 * (2 ** attempt)
                     print(f"  Rate limited, waiting {delay}s...")
                     time.sleep(delay)
+                    continue
                 elif 500 <= e.status_code < 600:
                     if attempt < self.MAX_RETRIES - 1:
                         print(f"  Server error, retrying...")
                         time.sleep(3.0 * (attempt + 1))
+                        continue
                 else:
                     print(f"  Client error, no retry")
                     return None
@@ -429,6 +442,7 @@ class IncrementalDataGenerator:
                 print(f"  Unexpected error: {type(e).__name__}: {e} (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 if attempt < self.MAX_RETRIES - 1:
                     time.sleep(3.0 * (attempt + 1))
+                    continue
         
         print(f"  Failed after {self.MAX_RETRIES} attempts")
         return None
@@ -443,6 +457,12 @@ class IncrementalDataGenerator:
             ],
         }
         
+        if self.timeout > 0:
+            timeout = self.timeout
+        else:
+            timeout = min(300, 60 + self.batch_size * 4)
+        print(f"  Sending request (timeout={timeout}s, batch_size={self.batch_size})")
+        
         request = urllib.request.Request(
             url=self.base_url.rstrip("/") + "/chat/completions",
             data=json.dumps(payload).encode("utf-8"),
@@ -452,7 +472,7 @@ class IncrementalDataGenerator:
         
         for attempt in range(self.MAX_RETRIES):
             try:
-                with urllib.request.urlopen(request, timeout=120) as response:
+                with urllib.request.urlopen(request, timeout=timeout) as response:
                     data = json.loads(response.read().decode("utf-8"))
                     if "choices" not in data or not data["choices"]:
                         print(f"  Empty response from LLM (attempt {attempt + 1}/{self.MAX_RETRIES})")
@@ -478,10 +498,12 @@ class IncrementalDataGenerator:
                     delay = 3.0 * (2 ** attempt)
                     print(f"  Rate limited, waiting {delay}s...")
                     time.sleep(delay)
+                    continue
                 elif 500 <= e.code < 600:
                     if attempt < self.MAX_RETRIES - 1:
                         print(f"  Server error, retrying...")
                         time.sleep(3.0 * (attempt + 1))
+                        continue
                 else:
                     print(f"  Client error (HTTP {e.code}), no retry")
                     return None
@@ -490,11 +512,13 @@ class IncrementalDataGenerator:
                 print(f"  Network error: {e.reason} (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 if attempt < self.MAX_RETRIES - 1:
                     time.sleep(3.0 * (attempt + 1))
+                    continue
             
             except TimeoutError:
                 print(f"  Request timeout (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 if attempt < self.MAX_RETRIES - 1:
                     time.sleep(3.0 * (attempt + 1))
+                    continue
             
             except json.JSONDecodeError as e:
                 print(f"  Invalid JSON response from LLM, no retry")
@@ -504,6 +528,7 @@ class IncrementalDataGenerator:
                 print(f"  Unexpected error: {type(e).__name__}: {e} (attempt {attempt + 1}/{self.MAX_RETRIES})")
                 if attempt < self.MAX_RETRIES - 1:
                     time.sleep(3.0 * (attempt + 1))
+                    continue
         
         print(f"  Failed after {self.MAX_RETRIES} attempts")
         return None
@@ -638,24 +663,69 @@ class IncrementalDataGenerator:
             for row in rows:
                 f.write(json.dumps(row, ensure_ascii=False) + "\n")
     
+    def _save_task_progress(self, task_key: str, task_name: str, task_type: str, target_count: int, current_count: int, current_batch: int) -> None:
+        """保存单个任务的进度"""
+        checkpoint_file = self.output_dir / "checkpoint.json"
+        
+        # 读取现有 checkpoint
+        checkpoint = {}
+        if checkpoint_file.exists():
+            try:
+                checkpoint = json.loads(checkpoint_file.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        
+        # 更新任务进度
+        if "task_progress" not in checkpoint:
+            checkpoint["task_progress"] = {}
+        
+        checkpoint["task_progress"][task_key] = {
+            "task_name": task_name,
+            "task_type": task_type,
+            "target_count": target_count,
+            "current_count": current_count,
+            "current_batch": current_batch,
+            "success": False,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        
+        checkpoint["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        checkpoint["stats"] = dict(self.stats)
+        
+        # 保存 checkpoint
+        checkpoint_file.write_text(json.dumps(checkpoint, ensure_ascii=False, indent=2), encoding="utf-8")
+    
+    def _append_task_rows(self, task_name: str, task_type: str, new_rows: list[dict]) -> None:
+        """增量追加新行到任务文件"""
+        task_dir = self.output_dir / "tasks" / task_type
+        task_dir.mkdir(parents=True, exist_ok=True)
+        task_file = task_dir / f"{task_name}.jsonl"
+        
+        with task_file.open("a", encoding="utf-8") as f:
+            for row in new_rows:
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    
     def _save_checkpoint(self) -> None:
         checkpoint_file = self.output_dir / "checkpoint.json"
         checkpoint = {
             "generated_count": len(self.all_rows),
             "stats": dict(self.stats),
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "task_progress": {
-                key: {
-                    "task_name": result.task_name,
-                    "task_type": result.task_type,
-                    "row_count": len(result.rows),
-                    "success": result.success,
-                    "message": result.message,
-                }
-                for key, result in self.task_results.items()
-            },
-            "completed_tasks": [k for k, v in self.task_results.items() if v.success],
+            "task_progress": {},
+            "completed_tasks": [],
         }
+        
+        for key, result in self.task_results.items():
+            checkpoint["task_progress"][key] = {
+                "task_name": result.task_name,
+                "task_type": result.task_type,
+                "row_count": len(result.rows),
+                "success": result.success,
+                "message": result.message,
+            }
+            if result.success:
+                checkpoint["completed_tasks"].append(key)
+        
         checkpoint_file.write_text(json.dumps(checkpoint, ensure_ascii=False, indent=2), encoding="utf-8")
         
         all_file = self.output_dir / "all.jsonl"
@@ -719,6 +789,31 @@ class IncrementalDataGenerator:
         if "generated_count" in checkpoint:
             print(f"  Total rows restored: {len(self.all_rows)}")
     
+    def _get_task_progress(self, task_name: str, task_type: str) -> Optional[dict]:
+        """获取任务进度"""
+        checkpoint = self._load_checkpoint()
+        if not checkpoint:
+            return None
+        
+        task_key = f"{task_type}_{task_name}"
+        task_progress = checkpoint.get("task_progress", {}).get(task_key)
+        if not task_progress:
+            return None
+        
+        # 检查任务文件是否存在
+        task_file = self.output_dir / "tasks" / task_type / f"{task_name}.jsonl"
+        if not task_file.exists():
+            return None
+        
+        # 统计实际行数
+        try:
+            actual_rows = [json.loads(line) for line in task_file.read_text(encoding="utf-8").splitlines() if line.strip()]
+            task_progress["current_count"] = len(actual_rows)
+        except Exception:
+            task_progress["current_count"] = 0
+        
+        return task_progress
+    
     def _is_task_completed(self, task_name: str, task_type: str, target_count: int) -> bool:
         task_file = self.output_dir / "tasks" / task_type / f"{task_name}.jsonl"
         if task_file.exists():
@@ -736,6 +831,7 @@ class IncrementalDataGenerator:
     ) -> TaskResult:
         task_key = f"{task_type}_{task_name}"
         
+        # 检查是否已完成
         if self._is_task_completed(task_name, task_type, target_count):
             print(f"  [SKIP] {task_name} already completed ({target_count} rows)")
             task_file = self.output_dir / "tasks" / task_type / f"{task_name}.jsonl"
@@ -744,11 +840,35 @@ class IncrementalDataGenerator:
             self.task_results[task_key] = result
             return result
         
+        # 检查是否有未完成的进度
+        task_progress = self._get_task_progress(task_name, task_type)
+        if task_progress and not task_progress.get("success", False):
+            saved_count = task_progress.get("current_count", 0)
+            if saved_count > 0:
+                print(f"  Resuming {task_name}: {saved_count}/{target_count} rows already saved")
+                
+                # 加载已保存的行
+                task_file = self.output_dir / "tasks" / task_type / f"{task_name}.jsonl"
+                saved_rows = [json.loads(line) for line in task_file.read_text(encoding="utf-8").splitlines() if line.strip()]
+                
+                # 去重
+                for row in saved_rows:
+                    key = self._dedupe_key(row)
+                    if key not in self.seen_keys:
+                        self.seen_keys.add(key)
+                
+                accepted = saved_count
+                task_rows = saved_rows
+            else:
+                accepted = 0
+                task_rows = []
+        else:
+            accepted = 0
+            task_rows = []
+        
         batch_count = max(1, (target_count + self.batch_size - 1) // self.batch_size)
-        accepted = 0
         failed_batches = 0
         max_failed_batches = 3
-        task_rows: list[dict] = []
         
         print(f"  Processing {task_name}: target={target_count}, batches={batch_count}")
         
@@ -769,7 +889,7 @@ class IncrementalDataGenerator:
                     print(f"  Current progress: {accepted}/{target_count} rows")
                     result = TaskResult(task_name, task_type, task_rows, success=False, message=f"Failed after {max_failed_batches} failed batches")
                     self.task_results[task_key] = result
-                    result.save(self.output_dir)
+                    self._save_checkpoint()
                     return result
                 
                 continue
@@ -782,12 +902,14 @@ class IncrementalDataGenerator:
                     print(f"  {max_failed_batches} batches with no valid output, stopping")
                     result = TaskResult(task_name, task_type, task_rows, success=False, message=f"No valid output after {max_failed_batches} batches")
                     self.task_results[task_key] = result
-                    result.save(self.output_dir)
+                    self._save_checkpoint()
                     return result
                 continue
             
             failed_batches = 0
             
+            # 处理本批次数据
+            new_rows = []
             for raw_row in raw_rows:
                 try:
                     row = self._normalize_row(raw_row)
@@ -809,10 +931,12 @@ class IncrementalDataGenerator:
                         aug_key = self._dedupe_key(aug_row)
                         if aug_key not in self.seen_keys:
                             self.seen_keys.add(aug_key)
+                            new_rows.append(aug_row)
                             task_rows.append(aug_row)
                             if aug_row is not row:
                                 self.stats["augmented"] += 1
                     
+                    new_rows.append(row)
                     task_rows.append(row)
                     accepted += 1
                     self.stats["accepted"] += 1
@@ -823,23 +947,25 @@ class IncrementalDataGenerator:
                     self.stats["error"] += 1
                     continue
             
+            # 立即保存本批次
+            if new_rows:
+                self._append_task_rows(task_name, task_type, new_rows)
+                self._save_task_progress(task_key, task_name, task_type, target_count, accepted, batch_idx)
+                print(f"    Batch {batch_idx}: saved {len(new_rows)} new rows, total={accepted}/{target_count}")
+            
             if accepted >= target_count:
                 break
-            
-            if batch_idx % 5 == 0:
-                print(f"    Batch {batch_idx}/{batch_count}: accepted={accepted}/{target_count}")
             
             if self.sleep_seconds > 0:
                 time.sleep(self.sleep_seconds)
         
         self.all_rows.extend(task_rows)
-        self._save_checkpoint()
         
         success = accepted >= target_count
         message = f"Generated {accepted}/{target_count} rows" if success else f"Partial: {accepted}/{target_count} rows"
         result = TaskResult(task_name, task_type, task_rows, success=success, message=message)
         self.task_results[task_key] = result
-        result.save(self.output_dir)
+        self._save_checkpoint()
         
         print(f"  Result: {accepted} rows generated")
         return result
@@ -1005,6 +1131,7 @@ def main() -> None:
     parser.add_argument("--base-url", default=os.getenv("OPENAI_BASE_URL"))
     parser.add_argument("--temperature", type=float, default=0.7)
     parser.add_argument("--sleep-seconds", type=float, default=2.0)
+    parser.add_argument("--timeout", type=int, default=0, help="Request timeout in seconds (0=auto based on batch size)")
     parser.add_argument("--config", help="Path to configuration file")
     parser.add_argument("--skip-config-check", action="store_true")
     parser.add_argument("--resume", action="store_true", help="Resume from checkpoint")
@@ -1024,12 +1151,15 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    timeout = args.timeout if args.timeout != 0 else config.get("timeout", 0)
+    
     print(f"{'='*60}")
     print(f"Data Synthesis Configuration:")
     print(f"  Model: {model}")
     print(f"  Base URL: {base_url}")
     print(f"  Temperature: {temperature}")
     print(f"  Batch Size: {batch_size}")
+    print(f"  Request Timeout: {'auto' if timeout == 0 else f'{timeout}s'}")
     print(f"  Sleep Between Batches: {sleep_seconds}s")
     print(f"  Output Directory: {output_dir}")
     print(f"  Merge Only: {args.merge_only}")
@@ -1055,6 +1185,7 @@ def main() -> None:
         sleep_seconds=sleep_seconds,
         batch_size=batch_size,
         config=config,
+        timeout=timeout,
     )
     
     try:
