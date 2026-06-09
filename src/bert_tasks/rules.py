@@ -96,6 +96,21 @@ def parse_volume(text: str) -> ParsedTask | None:
     return None
 
 
+def _clean_song_title(text: str) -> str:
+    """Clean song title by removing trailing punctuation and extra characters."""
+    text = text.strip()
+    text = re.sub(r"[，,。.、；;！!？?]+$", "", text)
+    text = re.sub(r"^(歌曲|歌)\s*", "", text)
+    return text.strip()
+
+
+def _clean_singer_name(text: str) -> str:
+    """Clean singer name by removing extra characters."""
+    text = text.strip()
+    text = re.sub(r"[，,。.、；;！!？?]+$", "", text)
+    return text.strip()
+
+
 def parse_music(text: str) -> ParsedTask | None:
     controls = [
         (r"(上一首|上一曲|前一首|切回前一首|再来一遍刚才那歌)", "previous"),
@@ -118,31 +133,90 @@ def parse_music(text: str) -> ParsedTask | None:
     if re.fullmatch(r"(关闭|退出|关掉)音乐", text):
         return _task(text, "music_control", "music_player", {"control": "close", "app": "default_music_app"})
 
-    if not re.search(r"(播放|放|来一首|想听)", text):
+    if not re.search(r"(播放|放|来一首|来首|想听|唱)", text):
         return None
     if re.search(r"(视频|电影|综艺|节目|电视剧|剧集|短视频|直播)", text):
         return None
-    music_text = re.sub(r"^(请|帮我|给我)?(播放|放|来一首|我想听|想听)", "", text)
-    music_text = re.sub(r"^(歌曲|歌|音乐)", "", music_text)
-    music_text = re.sub(r"(歌曲|歌|音乐)$", "", music_text)
+    
+    music_text = text
+    music_text = re.sub(r"^(请|帮我|给我)\s*", "", music_text)
+    music_text = re.sub(r"^(播放|放|来一首|来首|我想听|想听|唱)\s*", "", music_text)
+    music_text = re.sub(r"\s*(歌曲|歌|音乐)$", "", music_text)
+    
+    music_text = re.sub(r"^(\d+首)?\s*", "", music_text)
+    music_text = re.sub(r"^(\d+首)?\s*(歌曲|歌)\s*", "", music_text)
+    music_text = re.sub(r"^(\d+)首\s*", "", music_text)
+    music_text = re.sub(r"^(\d+)首\s*(歌曲|歌)\s*", "", music_text)
+    
+    music_text = re.sub(r"^(一首|两首|三首|几首|数首)\s*", "", music_text)
+    music_text = re.sub(r"^(一首|两首|三首|几首|数首)\s*(歌曲|歌)\s*", "", music_text)
+    
+    music_text = music_text.strip()
+    
     if not music_text:
         return None
-    singer = song = None
-    if "的" in music_text:
-        left, _, right = music_text.partition("的")
-        singer = left or None
-        song = right or None
-    elif re.search(r"(歌曲|歌)", text):
-        song = music_text or None
-    else:
-        return None
+    
+    singer = None
+    song = None
+    
+    comma_pattern = re.search(r"(.+?)[,，](.+?)的", music_text)
+    if comma_pattern:
+        song = _clean_song_title(comma_pattern.group(1))
+        singer = _clean_singer_name(comma_pattern.group(2))
+    
+    if singer is None and song is None and "的" in music_text:
+        parts = music_text.split("的")
+        
+        if len(parts) == 2:
+            left = parts[0].strip()
+            right = parts[1].strip()
+            
+            left = re.sub(r"^(\d+首)?", "", left)
+            right = re.sub(r"^(\d+首)?", "", right)
+            
+            if left and right:
+                singer = _clean_singer_name(left)
+                song = _clean_song_title(right)
+            
+            elif left and not right:
+                song = _clean_song_title(left)
+            
+            elif right and not left:
+                song = _clean_song_title(right)
+        
+        elif len(parts) > 2:
+            singer = _clean_singer_name(parts[0].strip())
+            song = _clean_song_title("的".join(parts[1:]).strip())
+    
+    if singer is None and song is None and ("," in music_text or "，" in music_text):
+        sep = "," if "," in music_text else "，"
+        parts = music_text.split(sep)
+        if len(parts) >= 2:
+            song_candidate = _clean_song_title(parts[0].strip())
+            singer_candidate = _clean_singer_name(parts[-1].strip())
+            
+            if song_candidate and singer_candidate:
+                song = song_candidate
+                singer = singer_candidate
+            elif song_candidate:
+                song = song_candidate
+            elif singer_candidate:
+                singer = singer_candidate
+    
+    if singer is None and song is None:
+        clean_text = re.sub(r"^(\d+首)?", "", music_text)
+        clean_text = re.sub(r"^(歌曲|歌)\s*", "", clean_text)
+        song = _clean_song_title(clean_text)
+    
     params: dict[str, str] = {}
     if singer:
         params["singer"] = singer
     if song:
         params["song"] = song
+    
     if params:
         return _task(text, "music_control", "music_player", params)
+    
     return None
 
 
@@ -166,6 +240,7 @@ def parse_video(text: str) -> ParsedTask | None:
             content = content.replace(label, "", 1)
             break
     content = re.sub(r"(视频)$", "", content)
+    content = re.sub(r"[，,。.、；;！!？?]+$", "", content.strip())
     if not content:
         return None
     return _task(text, "app_control", "video_player", {"control": "play", "content": content, "content_type": content_type})
@@ -220,6 +295,10 @@ def _extract_place(text: str) -> str | None:
     if match:
         place = match.group(1)
         place = re.sub(r"(去|吧|那里|这边)$", "", place)
+        place = re.sub(r"[，,。.、；;！!？?]+$", "", place.strip())
+        
         if 1 <= len(place) <= 8:
+            if re.match(r"^(一首|两首|三首|几首|首歌曲|首歌)", place):
+                return None
             return place
     return None
