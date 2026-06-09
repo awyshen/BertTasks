@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, Optional
 
 from bert_tasks.model import BertClassifierAndSlotParser
 from bert_tasks.runtime import RuleFirstRuntime
 
+try:
+    from fastapi import FastAPI
+    from pydantic import BaseModel
+except ImportError:
+    pass
+
+
+class ParseRequest(BaseModel):
+    text: str
+
 
 def create_app() -> Any:
-    try:
-        from fastapi import FastAPI
-        from pydantic import BaseModel
-    except ImportError as exc:
-        raise RuntimeError("Service dependencies are not installed. Install with `pip install -e .[service]`.") from exc
-
-    class ParseRequest(BaseModel):
-        text: str
-
     app = FastAPI(title="BertTasks Parser", version="0.1.0")
     model_parser = _build_model_parser_from_env()
     runtime = RuleFirstRuntime(model_parser=model_parser)
@@ -32,7 +33,7 @@ def create_app() -> Any:
     return app
 
 
-def _build_model_parser_from_env() -> BertClassifierAndSlotParser | None:
+def _build_model_parser_from_env() -> Optional[BertClassifierAndSlotParser]:
     classifier_dir = os.getenv("BERT_TASKS_CLASSIFIER_DIR")
     slot_tagger_dir = os.getenv("BERT_TASKS_SLOT_TAGGER_DIR")
     if not classifier_dir or not slot_tagger_dir:

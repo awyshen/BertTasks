@@ -191,9 +191,14 @@ PYTHONPATH=src python scripts/generate_data.py \
   "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
   "temperature": 0.7,
   "batch_size": 50,
-  "sleep_seconds": 2.0
+  "sleep_seconds": 2.0,
+  "timeout": 0
 }
 ```
+
+**配置说明**：
+- `timeout`: API 请求超时时间（秒），0 表示自动根据 batch_size 计算（推荐）
+- `batch_size`: 每批请求的样本数，较大的 batch_size 需要更长的超时时间
 
 ### 输出目录结构
 
@@ -294,12 +299,34 @@ PYTHONPATH=src python scripts/train.py --smoke
 
 ### 评估命令
 
-评估数据与规则 exact match：
+**评估规则解析准确率**：
 
 ```bash
 PYTHONPATH=src python scripts/evaluate.py \
   --file data/generated/splits/test/intent_classification.jsonl
 ```
+
+**评估 BERT 模型准确率**：
+
+```bash
+PYTHONPATH=src python scripts/evaluate_model.py \
+  --classifier-dir models/bert_tasks/intent_classifier \
+  --slot-tagger-dir models/bert_tasks/slot_tagger
+```
+
+### 模型评测结果
+
+| 模型 | 指标 | 值 |
+|------|------|------|
+| 意图分类器 | 准确率 | **98%** |
+| 意图分类器 | 宏平均 F1 | **97%** |
+| 意图分类器 | 加权平均 F1 | **98%** |
+| 意图分类器 | 测试样本数 | 5,028 |
+| 意图分类器 | 意图类别数 | 23 |
+| 槽位标签器 | 准确率 | **98%** |
+| 槽位标签器 | 宏平均 F1 | **97%** |
+| 槽位标签器 | 加权平均 F1 | **98%** |
+| 槽位标签器 | BIO 标签数 | 16 |
 
 ## 服务运行
 

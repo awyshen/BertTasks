@@ -15,6 +15,36 @@ from typing import Any, Optional
 
 from bert_tasks.parser import parse
 
+
+def strip_source(obj: dict) -> dict:
+    """Remove source field from structured output for comparison."""
+    if isinstance(obj, dict):
+        return {k: strip_source(v) for k, v in obj.items() if k != "source"}
+    elif isinstance(obj, list):
+        return [strip_source(item) for item in obj]
+    return obj
+
+
+def validate_row(row: dict) -> tuple[bool, str]:
+    """Validate a data row has required fields."""
+    required_fields = {"text", "task_type", "label", "slots", "structured_output"}
+    missing = required_fields - set(row.keys())
+    if missing:
+        return False, f"missing_fields:{','.join(sorted(missing))}"
+    
+    text = row.get("text", "")
+    if len(text) < 3 or len(text) > 100:
+        return False, "invalid_length"
+    
+    if not isinstance(row.get("slots"), dict):
+        return False, "invalid_slots_type"
+    
+    if not isinstance(row.get("structured_output"), dict):
+        return False, "invalid_structured_output"
+    
+    return True, ""
+
+
 try:
     from openai import OpenAI, APIConnectionError, APIStatusError, APITimeoutError, AuthenticationError
     OPENAI_AVAILABLE = True
