@@ -273,9 +273,9 @@ def parse_robot(text: str) -> ParsedTask | None:
 
 
 def parse_assistant(text: str) -> ParsedTask | None:
-    if re.search(r"(休息一下|退下吧|先下去吧|睡眠|休眠)", text):
+    if re.search(r"(休息一下|退下吧|先下去吧|睡眠|休眠|待机)", text):
         return _task(text, "assistant_control", "assistant", {"control": "sleep"})
-    if re.search(r"(聊一下|聊天模式|打开闲聊|进入聊天)", text):
+    if re.search(r"(聊一下|聊天模式|打开闲聊|进入聊天|唠嗑|唠嗑模式|闲聊模式)", text):
         return _task(text, "assistant_control", "assistant", {"control": "chat"})
     return None
 

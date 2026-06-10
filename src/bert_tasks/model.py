@@ -191,6 +191,9 @@ class BertClassifierAndSlotParser:
                 params["control"] = "set"
             elif sub_intent.startswith("play_"):
                 params["control"] = "play"
+        elif intent == "assistant_control":
+            if sub_intent in ["chat", "sleep"]:
+                params["control"] = sub_intent
         
         # Build result directly
         result = {
